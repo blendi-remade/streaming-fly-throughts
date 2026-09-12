@@ -18,6 +18,8 @@ own thread, in real time.
 
 ## What you see
 
+The repo also includes **[A Little Mind](cinema/README.md)**, a local web exhibit that connects this same brain to a detailed 3D fly and MiniMax H3 Director. Introduce sensory stimuli and watch measured activity become surreal cinema. Run `cd cinema`, `npm install`, then `npm run exhibit`. The local visual study works without an API key; live video uses a server-side fal key.
+
 Two HUD panels show the brain at work:
 
 - **B, the brain view.** A live map of the whole nervous system (optic lobes top left and right, central brain between

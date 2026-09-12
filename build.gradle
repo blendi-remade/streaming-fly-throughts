@@ -63,6 +63,22 @@ tasks.register('brainBench', JavaExec) {
 	jvmArgs = ['-Xmx6g']
 }
 
+// Local HTTP bridge for the cinema app. Alternatively: cd cinema && npm run brain (JDK only).
+tasks.register('cinemaBrain', JavaExec) {
+	group = 'fruitfly'
+	description = 'Expose the real connectome simulation at http://127.0.0.1:8766'
+	classpath = sourceSets.main.runtimeClasspath
+	mainClass = 'com.fruitfly.brain.tools.CinemaBridge'
+	def harnessArgs = []
+	['flyb', 'port', 'threads'].each { key ->
+		if (project.hasProperty(key)) {
+			harnessArgs += ["--${key}".toString(), project.property(key).toString()]
+		}
+	}
+	args = harnessArgs
+	jvmArgs = ['-Xmx4g']
+}
+
 // Headless vision harness: drives the retina (RetinaGeometry + SensoryEncoders) with synthetic scenes.
 //   gradlew visionBench "-Pscene=loom" ["-Pms=800"] ["-Pcfg=gain=0.65"]
 tasks.register('visionBench', JavaExec) {

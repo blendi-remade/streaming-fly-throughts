@@ -36,3 +36,10 @@ __pycache__/
 # env
 .env
 **/.env
+**/.env.local
+**/.env.*.local
+cinema/node_modules/
+cinema/.next/
+cinema/.brain-build/
+cinema/*.tsbuildinfo
+cinema/test-results/
