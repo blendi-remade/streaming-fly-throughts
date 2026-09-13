@@ -37,7 +37,7 @@ test("sensory-only imagery follows measured population activity, preserving the 
   const smell = interpretBrain(snapshot({ stimulus: { kind: "clear", intensity: 0, remainingMs: 0 }, populations: [{ name: "ORN_DM1", hz: 123, count: 74 }] }));
   assert.equal(smell.drive, "rest");
   assert.equal(smell.sensoryTheme, "odor");
-  assert.match(smell.prompt, /luminous scent-field/);
+  assert.match(smell.prompt, /amber scent wisps/);
   const bitter = interpretBrain(snapshot({ populations: [{ name: "Bitter GRNs", hz: 45, count: 38 }] }));
   assert.equal(bitter.drive, "rest");
   assert.equal(bitter.sensoryTheme, "bitter");
@@ -47,12 +47,25 @@ test("sensory-only imagery follows measured population activity, preserving the 
 });
 
 test("validates finite telemetry and bounds history", () => {
+  assert.equal(parseDirectorInput({ telemetry: snapshot(), initialization: 'fruit' }).initialization, 'fruit');
+  assert.throws(() => parseDirectorInput({ telemetry: snapshot(), initialization: 'invented' }), /Invalid starting scene/);
   assert.equal(parseDirectorInput({ telemetry: snapshot(), history: [], start: true }).start, true);
   assert.equal(parseDirectorInput({ telemetry: snapshot() }).mode, "direct");
   assert.throws(() => parseDirectorInput({ telemetry: snapshot(), mode: "unknown" }), /Invalid translator mode/);
   assert.throws(() => parseDirectorInput({ telemetry: snapshot({ totalSpikes: Infinity }) }), /Invalid spike count/);
   assert.throws(() => parseDirectorInput({ telemetry: snapshot(), history: Array(7).fill("past scene") }), /at most six/);
   assert.throws(() => parseDirectorInput({ telemetry: snapshot({ populations: Array(65).fill({ name: "x", hz: 1, count: 1 }) }) }), /Invalid populations/);
+});
+
+test('secondary actions and sensory cues require measured evidence', () => {
+  const baseline = snapshot({ motors: { ...EMPTY_BRAIN.motors, groom: 0.4 } });
+  const labelOnly = interpretBrain({ ...baseline, stimulus: { kind: 'sugar', intensity: 1, remainingMs: 1000 } });
+  assert.doesNotMatch(labelOnly.prompt, /concurrent measured feeding response|Measured sugar sensory activity/);
+  const responding = interpretBrain({ ...baseline, motors: { ...baseline.motors, feed: 0.2 }, populations: [{ name: 'Sugar GRNs', count: 34, hz: 100 }] });
+  assert.equal(responding.drive, 'groom');
+  assert.notEqual(responding.responseKey, labelOnly.responseKey);
+  assert.match(responding.prompt, /concurrent measured feeding response/);
+  assert.match(responding.evidence.join(' '), /0.200/);
 });
 
 test("origin guard rejects cross-site, missing-origin and non-loopback writes", () => {

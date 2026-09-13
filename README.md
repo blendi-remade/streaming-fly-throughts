@@ -1,202 +1,156 @@
-# Fly Brain Minecraft
+# Fly / Thoughts
 
-[![build](https://github.com/blendi-remade/fly-brain-minecraft/actions/workflows/build.yml/badge.svg)](https://github.com/blendi-remade/fly-brain-minecraft/actions/workflows/build.yml)
-[![code: MIT](https://img.shields.io/badge/code-MIT-blue.svg)](LICENSE)
-[![data: CC BY 4.0](https://img.shields.io/badge/data-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+A simulated fruit fly nervous system directing live video.
 
-A Fabric mod for Minecraft 1.21.1 that runs the complete male fruit fly nervous system inside a fly mob.
+Fly / Thoughts connects a spiking neural network to an interactive Three.js laboratory and MiniMax H3 Director through fal. Give the model sugar, bitterness, a looming shadow, touch, or odor. The app reads the resulting neural activity and turns it into cinematic directions.
 
-The connectome is the male *Drosophila melanogaster* central nervous system released by Janelia, Google Research and
-the Cambridge connectomics group (neuPrint `male-cns:v1.0`, Berg et al., *Cell*, September 2026): 176,422 neurons and
-6.29 million connections of five or more synapses, carrying 90 of the dataset's 125 million synapses. Every neuron is
-simulated as a leaky integrate-and-fire unit following Shiu et al. (*Nature* 2024). The Minecraft world drives the fly's
-real sensory neurons (photoreceptors, olfactory and gustatory receptor neurons, Johnston's organ, bristles), and the
-activity of its real descending and motor neurons is decoded into what the mob does. Each fly runs its own brain on its
-own thread, in real time.
+The premise is streaming a fly's thoughts. The implementation is a visualization of a computational model, not a recording of a living fly or a decoder of mental images. The network supplies behavioral readouts. We author the setting, visual metaphors, and cinematic style.
 
-![Brain view (B) on the left, neuroscope (H) on the right, a fly in flight with its identity tag](docs/media/hud-brainview-neuroscope.png)
-
-## What you see
-
-The repo also includes **[A Little Mind](cinema/README.md)**, a local web exhibit that connects this same brain to a detailed 3D fly and MiniMax H3 Director. Introduce sensory stimuli and watch measured activity become surreal cinema. Run `cd cinema`, `npm install`, then `npm run exhibit`. The local visual study works without an API key; live video uses a server-side fal key.
-
-Two HUD panels show the brain at work:
-
-- **B, the brain view.** A live map of the whole nervous system (optic lobes top left and right, central brain between
-  them, nerve cord below). Neurons light up at their real soma positions as they fire and fade over about 300 ms. Below
-  the map: spikes per region for the current tick and a spikes-per-tick history.
-- **H, the neuroscope.** The readout: decoded motor channels (forward, yaw, back, stop, land, flight, feed, groom, song),
-  firing rates of the key populations (MN9, the giant fibre DNp01, DNa02 left and right, MDN, aDN1/2, LC4, LPLC2, Kenyon
-  cells, projection neurons and more), a spike raster, and the retina as the fly sees it.
-
-Every fly gets a persistent number, an identity colour and a matching name tag (`Fly-1 ♂`). The same colour heads both
-panels and draws a rotating ring above the fly whose brain you are watching, so with several flies it is always clear
-which brain is which.
-
-You can also put the brain into the world: `/flybrain build` places the 141,781 neurons with a reconstructed soma as a
-walk-through structure of stained glass coloured by region, and the linked fly's spiking neurons flash as sea lanterns.
-
-![The connectome built out of blocks: brain on the left, nerve cord on the right](docs/media/flybrain-build.png)
-
-## What the fly does
-
-| Behaviour | Trigger in game | Pathway in the connectome | Origin |
-|---|---|---|---|
-| Feeds (proboscis extension) | Touching cake, honey, berries, fruit, sugar; a player offering food by right-click | sugar GRNs (`LB3b`, `LB3c`, `PhG1a-c`, `LgLG3`) to G2N-1 and Fudog to the MN9 proboscis motor neuron | emergent |
-| Rejects bitter food | Spider eye, poisonous potato, pufferfish, rotten flesh | bitter GRNs (`LB1a-d`) to Scapula, MN9 silenced even with sugar present | emergent |
-| Escape jump and takeoff | Something approaching fast (a player sprinting at it, a falling block, another mob) | LC4 and LPLC2 looming detectors to the giant fibre DNp01 to the TTMn jump muscle motor neuron | decision emergent, looming drive hand-built |
-| Grooms | Rain, dust, collisions | Johnston's organ and head bristles to aDN1/aDN2 and the head grooming descending neurons | emergent |
-| Walks, turns, halts | Whatever the brain does with its inputs | DNp09 and the BDN walking neurons, DNa02 right minus left, MDN (backward), bluebell and brake (halt) | readout emergent, gains hand-built |
-| Walks toward food | Nearby odor sources | the antennal lobe saturates in this model and gives no reliable steering signal, so a reflex layer takes over while the brain is quiet; the HUD shows `[REFLEX]` when it does | hand-built |
-| Flies and lands | Escape jump or takeoff neurons | DNg02 wing power and takeoff neurons enter flight, DNp07/DNp10 land | state machine hand-built |
-| Courtship song hooks (males) | Another fly seen, smelled or tapped | pC1/P1 to the pIP10 song neuron, one wing extended | wired, not yet demonstrated |
-
-The point of the project is to be honest about that last column. What comes out of the wiring diagram and what is
-scaffolding is spelled out in [docs/REFERENCE.md](docs/REFERENCE.md) and [docs/VALIDATION.md](docs/VALIDATION.md).
-
-## Quick start
-
-Requirements: Minecraft 1.21.1, Fabric Loader 0.17.3 or newer, Fabric API for 1.21.1, Java 21 or newer. A machine with
-8 or more cores keeps one fly in real time; more flies share the cores (`maxBrains`, default 4).
-
-Install: put `fruitfly-connectome-<version>.jar` and the Fabric API jar into `.minecraft/mods/`. The 23 MB connectome is
-inside the jar, nothing is downloaded at runtime. To build from source run `./gradlew build` (JDK 21 or newer); the jar
-lands in `build/libs/`.
-
-Then, in a world:
-
-1. `/fruitfly spawn` (or use the Fruit Fly Spawn Egg from the creative menu). `/fruitfly spawn big` gives a 2.5x fly.
-2. Press **B** for the brain view and **H** for the neuroscope.
-3. Drop an apple next to it, right-click it while holding sugar, sprint at it, or make it rain.
-4. `/fruitfly loom`, `/fruitfly feed`, `/fruitfly groom` and `/fruitfly bitter` inject the corresponding sensory input
-   directly, which is handy for demos.
-
-### Commands
-
-| Command | Effect |
-|---|---|
-| `/fruitfly spawn [male\|female] [count]`, `/fruitfly spawn big` | Spawn flies (females use the same male brain for now) |
-| `/fruitfly stats` | Brains in use, spikes per tick, active neurons, real-time factor and decoded command per fly |
-| `/fruitfly stim <population> <hz> [seconds]` | Drive any population as Poisson spike generators, for example `/fruitfly stim MDN 60 3` walks the fly backward |
-| `/fruitfly watch <population>` | Add a population to the neuroscope |
-| `/fruitfly feed`, `bitter`, `loom`, `groom`, `odor` | Canned stimuli for the validated pathways |
-| `/fruitfly senses` | What each fly currently smells, tastes, sees and feels |
-| `/fruitfly pause`, `resume`, `kill` | Freeze or unfreeze the brains, remove the flies |
-| `/flybrain build [size]`, `link`, `status`, `clear` | The connectome as a block structure, linked to a fly |
-| `/brainview`, `/brainview lock [number]`, `look`, `nearest`, `view dorsal\|frontal\|side`, `size <0.15..0.75>`, `list` | Control the pinned brain map and which fly it follows |
-
-Populations are named with neuPrint types and annotations: `DNp09`, `DNa02/L`, `prefix:ORN_DM1`, `class:gustatory`,
-`superclass:vnc_motor`, `subclass:wm`, `body:10783`, and intersections such as `class:mechanosensory_tactile&nerve:ADMN`.
-Every neuron keeps its neuPrint body id, so anything on the HUD can be looked up at
-https://neuprint.janelia.org/?dataset=male-cns%3Av1.0.
-
-Configuration lives in `config/fruitfly.json` (integration step, gain, thread count, fly scale, speeds, telemetry rate,
-HUD populations). All keys are documented in [docs/REFERENCE.md](docs/REFERENCE.md).
+![The Three.js laboratory, procedural fly, monitor, and night skyline](cinema/docs/observatory.png)
 
 ## How it works
 
-```
-Minecraft world  -> sensors -> SensoryFrame -> encoders -> Poisson drive on real sensory neuron types
-                                                              |
-                                             LifNetwork, one thread per fly, 50 ms of brain per game tick
-                                                              |
-FlyEntity movement <- MotorDecoder <- descending and motor neuron population rates
-```
+1. A local Java process loads the bundled connectome and runs a leaky integrate-and-fire network.
+2. The controls deliver inputs through the model's sensory encoders.
+3. The bridge reports population firing rates, spike counts, and modeled motor outputs.
+4. An authored mapping turns those readings into cinematic directions.
+5. H3 generates a continuous video stream, displayed on the monitor inside the 3D scene.
 
-Every neuron is the same current-based leaky integrate-and-fire unit with an exponential synapse, as in Shiu et al. 2024:
-membrane time constant 20 ms, synaptic time constant 5 ms, rest and reset at -52 mV, threshold -45 mV, refractory
-2.2 ms, synaptic delay 1.8 ms, and each synapse adds 0.275 mV times a global gain. Acetylcholine, monoamines and unclear
-transmitters are excitatory, GABA, glutamate and histamine are inhibitory. There is no spontaneous activity: every spike
-traces back to a sensory neuron. Only neurons that are away from rest or have pending input are integrated, so cost scales
-with activity, not network size.
-
-The one calibration choice is the global gain of 0.65. The published weight was fitted to the FlyWire female brain, which
-has fewer synapses per neuron than the male dataset; at the literal weight the male network over-excites. The gain was
-chosen with the paper's own recipe: the smallest value at which sugar input drives the proboscis motor neuron while the
-grooming and escape pathways stay stable and Kenyon cells stay silent. Kenyon cells additionally receive an input gain of
-0.25, a stand-in for their known high spike threshold. Both choices, the alternatives that were rejected, and an
-independent Brian2 replication that argues for a lower gain are documented in `docs/`.
-
-Sensory encoding, the odor and taste tables, the motor map and the decoder's priority ladder (escape, landing, brake,
-halt, backward, forward, groom, song) are described in [docs/REFERENCE.md](docs/REFERENCE.md) and
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
-## Validation
-
-Headless benches (`./gradlew brainBench`, `visionBench`, `embodiedBench`), gain 0.65, dt 0.5 ms. Rates are population
-means over one 50 ms tick.
-
-| Experiment | Result |
-|---|---|
-| Silent brain | 0 spikes |
-| Sugar GRNs at 120 Hz | G2N-1 20-60 Hz, Fudog 10-40 Hz, MN9 30-90 Hz, Kenyon cells 0 |
-| Bitter GRNs plus the sugar stimulus | MN9 suppressed to 0-10 Hz |
-| Looming (LC4 and LPLC2 at 150 Hz) | giant fibre 330-380 Hz, DNp04 230-250 Hz, TTMn 60-80 Hz, decoder enters ESCAPE |
-| Johnston's organ wind and grooming neurons at 150 Hz | aDN1 180-210 Hz, aDN2 130-150 Hz |
-| Scripted apple scenario | odor, approach, tarsal then labellar sugar contact, FEED with MN9 at 60 Hz |
-| Speed (32 cores, 8 worker threads) | 25-60 ms of compute per 50 ms tick; the runner falls behind rather than skipping neural time |
-
-56 JUnit tests cover the integrator, the retina geometry, the encoders and the decoder. Full protocol and numbers:
-[docs/VALIDATION.md](docs/VALIDATION.md).
-
-## Rebuilding the data
-
-```bash
-pip install requests numpy pandas
-python tools/fetch_neuprint.py     # anonymous neuPrint access, about two minutes
-python tools/build_flyb.py         # writes src/main/resources/connectome/malecns-v1.0.flyb.gz
+```text
+Stimulus -> sensory encoders -> spiking network -> measured readouts
+                                                       |
+                                                       v
+                                          authored scene direction
+                                                       |
+                                                       v
+                                            H3 via fal -> monitor
 ```
 
-`--min-weight 1` fetches all 25.9 million connections; `build_flyb.py --exclude-superclass ol_intrinsic,visual_projection`
-builds a brain-only file without the optic lobes. Point `connectomeFile` in the config at the result. Exact queries,
-transformations and file hashes are in [PROVENANCE.md](PROVENANCE.md).
+Generated frames do not feed back into the network. The simulated fly does not see or recognize the objects in the generated video. This is a neural-data-to-video experiment, not a closed-loop visual environment.
 
-## Limitations
+## Run locally
 
-- Every neuron has the same parameters. The antennal lobe saturates under any odor, and the medulla motion pathway stays
-  silent, so looming and object signals are painted onto LC4/LPLC2/LC11/LC10a analytically instead of emerging from the
-  lamina. Walking toward food is a reflex layer, not the connectome.
-- No neuromodulation, neuropeptides, gap junctions or spontaneous activity.
-- Connections with fewer than five synapses are omitted.
-- Only the male nervous system exists; female flies use the same brain.
-- Absolute firing rates should not be trusted, only the pattern of which populations respond.
+Requirements:
 
-## Data sources and citations
+- Node.js 20.9 or newer and npm.
+- A JDK 21 or newer, with `java` and `javac` on your PATH, or `JAVA_HOME` set.
+- A browser with WebGL2. Chrome or Edge is useful for WebM recording.
+- Memory for the network and browser. The brain launcher allows a Java heap of up to 4 GB.
 
-The mod embeds a thresholded derivative of the male Drosophila CNS connectome, neuPrint dataset `male-cns:v1.0`, produced
-by the FlyEM Project Team at HHMI Janelia Research Campus, the Drosophila Connectomics Group (University of Cambridge and
-MRC LMB) and Google Research, licensed CC BY 4.0. Source: https://male-cns.janelia.org/ and
-https://www.janelia.org/project-team/flyem/male-cns-connectome. Modifications: synapse-count threshold, integer
-re-indexing, quantised weights (see PROVENANCE.md).
+From a checkout of this repository:
 
-If you use this in research or teaching, please cite:
-
-- Berg S, Beckett IR, Costa M, Schlegel P, Januszewski M, et al. Sexual dimorphism in the complete Drosophila male
-  central nervous system connectome. *Cell* 189(18):5504-5526 (2026). https://doi.org/10.1016/j.cell.2026.08.015
-- Shiu PK, Sterne GR, Spiller N, et al. A Drosophila computational brain model reveals sensorimotor processing.
-  *Nature* 634:210-219 (2024). https://doi.org/10.1038/s41586-024-07763-9
-- Plaza SM, Clements J, Dolafi T, et al. neuPrint: An open access tool for EM connectomics.
-  *Front. Neuroinform.* 16:896292 (2022). https://doi.org/10.3389/fninf.2022.896292
-
-The companion papers on the visual system, the nerve cord, the taste system and the sexually dimorphic circuits, and the
-descending-neuron literature behind the motor decoding, are listed in [docs/REFERENCE.md](docs/REFERENCE.md).
-
-This project is not affiliated with or endorsed by HHMI, Janelia, Google, the University of Cambridge, the MRC LMB or
-Mojang/Microsoft. Minecraft is a trademark of Mojang/Microsoft.
-
-## License
-
-Code: MIT, see [LICENSE](LICENSE). The bundled connectome derivative: CC BY 4.0 with the attribution above.
-
-## Repository layout
-
+```sh
+cd cinema
+npm ci
+npm run exhibit
 ```
-tools/                                  data pipeline (fetch_neuprint.py, build_flyb.py, texture generators)
-src/main/java/com/fruitfly/brain        engine-independent brain: connectome loader, LIF network, encoders, decoder, benches
-src/main/java/com/fruitfly/entity       the fly: world senses, body physics, odor and taste tables
-src/main/java/com/fruitfly              mod entrypoint, config, brain service, commands, networking
-src/client/java/com/fruitfly/client     renderer, model, brain view, neuroscope, in-world overlay
-src/main/resources/connectome           the bundled connectome (23 MB)
-src/test/java                           JUnit tests
-docs/                                   ARCHITECTURE.md, REFERENCE.md, VALIDATION.md, FOLLOWUPS.md, research notes
+
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
+
+The launcher starts the brain bridge on port 8766 and the web app on port 3000. It can reuse an already healthy bridge. Ctrl+C stops processes it started, but leaves a reused bridge running. The connectome is bundled, so no dataset download is needed.
+
+Alternatively, run `npm run brain` and `npm run dev` in separate terminals, both from `cinema/`. The launcher compiles only the engine-independent Java classes needed by the exhibit.
+
+### Enable generated video
+
+Create `cinema/.env.local` using [cinema/.env.example](cinema/.env.example) as the template:
+
+```dotenv
+FAL_KEY=your_fal_key_here
+BRAIN_URL=http://127.0.0.1:8766
 ```
+
+Use your own fal key, then restart the web app. The key stays on the server and `.env.local` is ignored by Git. Never put it in a `NEXT_PUBLIC_` variable or commit it.
+
+Choose a starting scene and select **Start cinema**. Opening the page does not start generation. A live session requires a connected brain and uses your fal account. **Stop cinema** ends it. The app limits a screening to three minutes using wall-time and generated-playback limits. Already dispatched generation can still incur charges. See the [provider's model page](https://fal.ai/models/minimax/h3-max/director) for pricing and availability.
+
+Without a key, the monitor shows a local procedural visual study. It reacts to measured activity when the brain is connected. If the brain is offline, the buttons only change the preview and neural measurements are unavailable. The study is not H3 video and does not render the chosen live-video setting.
+
+## Choose the world
+
+Starting scenes are authored settings, not neural initial conditions. Choose one before starting cinema:
+
+| Setting | Subject |
+| --- | --- |
+| Garden absurdity | A coiled dog dropping on a paving stone, filmed with excessive cinematic grandeur |
+| Sugar cathedral | A large translucent sugar crystal on a kitchen counter |
+| Overripe orchard | A split overripe plum in a miniature garden |
+
+The setting establishes the subject. Measured responses direct the action. Feeding can add an approach, escape can drive a retreat, grooming can introduce foreleg cleaning, and locomotion or flight can move the viewpoint. Significant secondary feeding activity can affect a scene even when grooming remains the strongest output.
+
+Sensory population activity can add declared visual cues, such as an overhead shadow or warm highlights. These are artistic conventions. Clicking a button alone does not establish that the corresponding neural response occurred. Lighting, environmental movement, and comic presentation are authored animation rather than neural measurements.
+
+## Explore and interact
+
+- **Left-drag** to orbit, **right-drag** to pan, and scroll to zoom. Room, Fly, and Cinema restore preset views.
+- Click the physical desk buttons or use the matching controls. Keys **1 through 5** apply Sugar, Bitter, Shadow, Touch, and Odor.
+- Inputs replace the previous input and expire in simulated time. A slow simulation takes longer in wall time.
+- **Automatic stimuli** cycles through inputs. It does not script the network's responses.
+- **Clear stimulus** removes external input while preserving recurrent activity.
+- **More details** shows population rates, readouts, simulation speed, director timing, and translation options. **Reset neural state** starts a fresh trial and stops an active film.
+- **Record 15 seconds** saves a 1600 x 900 WebM of the current 3D view. Click again to stop early. Live capture includes received audio and a visible interpretation label.
+
+![Close view of the procedural fly and its connection to the monitor](cinema/docs/specimen.png)
+
+<details>
+<summary>Mobile layout</summary>
+
+<img src="cinema/docs/mobile.png" alt="Mobile layout with scene selection, camera controls, neural readings, and stimulus buttons" width="320" />
+
+</details>
+
+These screenshots show the local procedural visual study. Generated video varies between sessions.
+
+## What the measurements mean
+
+The bundled data contains **176,422 neurons and 6,287,749 directed connections** from `male-cns:v1.0`. Connections with fewer than five synapses are excluded. This is a thresholded connectivity graph, not every synapse in the source dataset. See [PROVENANCE.md](PROVENANCE.md) for attribution, processing steps, and limitations, and [the build statistics](docs/connectome-stats.json) for exact counts.
+
+The graph drives a simplified spiking model with configured neuron dynamics, sensory mappings, and motor decoding. Population rates are reported in Hz. Behavioral readouts are model scores, not probabilities of hunger, fear, or consciousness. Anatomical connectivity alone does not establish that this simulation reproduces a living fly's behavior or experience.
+
+The fly mesh, idle motion, cable particles, and room are procedural artwork. Each cable particle does not represent an individual spike. Feeding output can trigger an approach to the chosen subject, but cannot tell us that a fly is imagining that subject.
+
+## Timing and limitations
+
+Live steering uses fresh neural samples rather than the local visual study's editorial hold. The default **Direct** translator builds prompts locally, without an LLM call. Changed direction signatures can be submitted at a minimum interval of 800 ms. Only one prompt awaits provider admission at a time; newer evidence replaces queued evidence. Steady scenes receive continuations about every 12 seconds.
+
+**LLM assisted** mode is optional and can enrich steady continuations. Startup and measured changes still use the direct path. New evidence cancels obsolete enrichment.
+
+A fast prompt submission does not mean an immediate visible response. Simulation speed, provider admission, generation, and buffering all contribute delay. Generated-chunk events do not timestamp the frame currently visible in the browser. H3 can also interpret a direction imperfectly, including producing unclear objects or weak motion.
+
+This is a local research and creative demo. The app binds to loopback and uses a constrained server-side fal proxy. Publishing the source is different from public hosting, which would need authentication, per-user usage controls, and a review of the proxy and session boundaries.
+
+## Project layout
+
+| Path | Purpose |
+| --- | --- |
+| `cinema/components/theater.tsx` | Controls, scene selection, and session interface |
+| `cinema/components/observatory.tsx` | Three.js renderer, camera, picking, and video texture |
+| `cinema/lib/scene/` | Fly geometry, laboratory, city, and procedural screen |
+| `cinema/lib/cinematic.ts` | Starting scenes and response-to-prompt mapping |
+| `cinema/lib/use-director.ts` | fal stream lifecycle and neural steering |
+| `cinema/lib/director-scheduling.ts` | Prompt admission, coalescing, and timing |
+| `cinema/lib/use-recording.ts` | Browser WebM capture |
+| `cinema/app/api/` | Local brain routes and server-side provider access |
+| `src/main/java/com/fruitfly/brain/` | Neural model, encoders, and decoders |
+| `src/main/java/com/fruitfly/brain/tools/CinemaBridge.java` | Headless HTTP bridge |
+| `src/main/resources/connectome/` | Bundled connectome data |
+| `tools/` | Data preparation and model utilities |
+
+To add a starting scene, edit `INITIALIZATIONS` and `setScene` in `cinema/lib/cinematic.ts`. The server validates initialization identifiers against the same list. Keep the authored world separate from measured responses.
+
+## Development checks
+
+```sh
+cd cinema
+npm test
+npm run typecheck
+npm run build
+```
+
+The cinema suite covers stimulus observation, prompt scheduling, measured-response constraints, initialization selection, provider guards, and cable attachment. Provider tests use mocks and do not spend API credits. See [cinema/VALIDATION.md](cinema/VALIDATION.md) for verification scope.
+
+## License and attribution
+
+Code is licensed under [MIT](LICENSE). Bundled connectome data is attributed separately under **CC BY 4.0** in [PROVENANCE.md](PROVENANCE.md). Data credits include the FlyEM Project Team at HHMI Janelia, the University of Cambridge and MRC LMB connectomics groups, and Google Research Connectomics.
+
+Generated video uses an external service and is subject to that service's terms. No API credentials are included in the repository.

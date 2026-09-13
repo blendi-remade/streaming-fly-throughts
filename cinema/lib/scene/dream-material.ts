@@ -1,7 +1,4 @@
-'use client';
-import { useEffect, useRef } from 'react';
-import * as THREE from 'three';
-import type { Drive } from '@/lib/types';
+import * as THREE from "three";
 
 const FRAGMENT = `
 precision highp float;
@@ -77,49 +74,21 @@ void main(){
  vec2 grid=vec2(80.,45.);vec2 cell=floor(vUv*grid+vec2(t*.3,t*.12));vec2 local=fract(vUv*grid+vec2(t*.3,t*.12));
  float star=hash(vec3(cell,1.));float mote=smoothstep(.075,0.,length(local-vec2(.5)))*step(.975,star);
  col+=mix(hue,vec3(1.),.6)*mote*.65;
- float grain=(hash(vec3(gl_FragCoord.xy,mod(uTime,100.)))-.5)*.042;
+ float grain=(hash(vec3(gl_FragCoord.xy,mod(uTime,100.)))-.5)*.012;
  col+=grain;
  float vignette=1.-dot(uv*vec2(.6,1.),uv*vec2(.6,1.))*.5;col*=max(.2,vignette);
  col=pow(max(col,vec3(0.)),vec3(.82));
- gl_FragColor=vec4(col,1.);
+ // The study palette is authored in display space. The scene's OutputPass
+ // performs the final display conversion, so supply linear values here.
+ gl_FragColor=vec4(pow(col,vec3(2.2)),1.);
 }`;
 
-const MOODS: Record<Drive, number> = { quiet: 0, appetite: 1, aversion: 2, escape: 3, groom: 4, explore: 5 };
-export function DreamStudy({ drive, activity, paused = false }: { drive: Drive; activity: number; paused?: boolean }) {
-  const host = useRef<HTMLDivElement>(null);
-  const latest = useRef({ drive, activity, paused });
-  useEffect(() => { latest.current = { drive, activity, paused }; }, [drive, activity, paused]);
-  useEffect(() => {
-    if (!host.current) return;
-    const element = host.current;
-    let renderer: THREE.WebGLRenderer;
-    try { renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'low-power', preserveDrawingBuffer: true }); } catch { return; }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
-    element.appendChild(renderer.domElement);
-    const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    const material = new THREE.ShaderMaterial({
-      uniforms: { uTime: { value: 0 }, uResolution: { value: new THREE.Vector2(800, 500) }, uMood: { value: 0 }, uEnergy: { value: 0 } },
-      vertexShader: 'varying vec2 vUv; void main(){vUv=uv;gl_Position=vec4(position,1.);}', fragmentShader: FRAGMENT,
-    });
-    const geometry = new THREE.PlaneGeometry(2, 2);
-    scene.add(new THREE.Mesh(geometry, material));
-    const resize = () => { const w = Math.max(1, element.clientWidth), h = Math.max(1, element.clientHeight); renderer.setSize(w, h); material.uniforms.uResolution.value.set(w, h); };
-    const observer = new ResizeObserver(resize); observer.observe(element); resize();
-    let frame = 0, last = 0, time = 0;
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const render = (now: number) => {
-      frame = requestAnimationFrame(render);
-      if (now - last < 40) return;
-      const delta = Math.min(.1, (now - last) / 1000); last = now;
-      if (!latest.current.paused && !reduced && !document.hidden) time += delta;
-      material.uniforms.uTime.value = time;
-      material.uniforms.uMood.value = MOODS[latest.current.drive];
-      material.uniforms.uEnergy.value += (latest.current.activity - material.uniforms.uEnergy.value) * .08;
-      renderer.render(scene, camera);
-    };
-    frame = requestAnimationFrame(render);
-    return () => { cancelAnimationFrame(frame); observer.disconnect(); geometry.dispose(); material.dispose(); renderer.dispose(); renderer.domElement.remove(); };
-  }, []);
-  return <div ref={host} className="dream-canvas" aria-label="Procedural cinematic study of a tiny sensory universe" />;
+
+export function makeDreamMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uResolution: { value: new THREE.Vector2(1280, 720) }, uMood: { value: 0 }, uEnergy: { value: 0 } },
+    vertexShader: 'varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader: FRAGMENT,
+    toneMapped: false,
+  });
 }

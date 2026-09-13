@@ -1,5 +1,5 @@
 import { createFalClient } from "@fal-ai/client";
-import { CINEMATIC_STYLE, DIRECTOR_SYSTEM_PROMPT, interpretBrain, type CinematicDirection } from "../../../lib/cinematic";
+import { CINEMATIC_STYLE, sceneStyle, DIRECTOR_SYSTEM_PROMPT, interpretBrain, type CinematicDirection } from "../../../lib/cinematic";
 import { parseDirectorInput } from "../../../lib/server/director-input";
 import { assertLocalRequest, jsonResponse, limitRequests, readBoundedJson, RequestError, requestErrorResponse } from "../../../lib/server/guards";
 
@@ -10,9 +10,9 @@ export const maxDuration = 30;
 export async function POST(request: Request): Promise<Response> {
   try {
     assertLocalRequest(request);
-    const { telemetry, history, start, mode } = parseDirectorInput(await readBoundedJson(request));
+    const { telemetry, history, start, mode, initialization } = parseDirectorInput(await readBoundedJson(request));
     if (telemetry.source !== "connectome") throw new RequestError("Live cinema requires the connected brain simulation. Rehearsal uses the local artistic preview.", 409);
-    const fallback = interpretBrain(telemetry, start);
+    const fallback = interpretBrain(telemetry, start, undefined, initialization);
     if (mode === "direct") return jsonResponse(fallback);
     const key = process.env.FAL_KEY?.trim();
     if (!key) return jsonResponse({ ...fallback, warning: "FAL_KEY is not configured. Using the deterministic artistic translator." });
@@ -42,7 +42,7 @@ export async function POST(request: Request): Promise<Response> {
       // deliberately not returned: attribution is rebuilt from the measured readout.
       const direction: CinematicDirection = {
         ...fallback,
-        prompt: `${parsed.prompt.trim()} ${CINEMATIC_STYLE}`,
+        prompt: `${parsed.prompt.trim()} ${sceneStyle(initialization)}`,
         caption: parsed.caption.trim(),
         translator: "llm",
       };

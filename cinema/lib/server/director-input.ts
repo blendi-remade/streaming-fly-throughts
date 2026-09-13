@@ -1,3 +1,4 @@
+import { isInitialization, type Initialization } from "../cinematic";
 import type { BrainSnapshot } from "../types";
 import type { TranslatorMode } from "../director-scheduling";
 import { RequestError } from "./guards";
@@ -15,8 +16,9 @@ function text(value: unknown, field: string, maximum: number): string {
   return value.trim();
 }
 
-export function parseDirectorInput(value: unknown): { telemetry: BrainSnapshot; history: string[]; start: boolean; mode: TranslatorMode } {
+export function parseDirectorInput(value: unknown): { telemetry: BrainSnapshot; history: string[]; start: boolean; mode: TranslatorMode; initialization: Initialization } {
   const body = object(value);
+  if (body.initialization !== undefined && !isInitialization(body.initialization)) throw new RequestError("Invalid starting scene.");
   const raw = object(body.telemetry);
   if (raw.source !== "connectome" && raw.source !== "preview") throw new RequestError("Invalid telemetry source.");
   if (!Array.isArray(raw.populations) || raw.populations.length > 64) throw new RequestError("Invalid populations.");
@@ -50,5 +52,5 @@ export function parseDirectorInput(value: unknown): { telemetry: BrainSnapshot; 
     },
     stimulus: { kind: text(stimulus.kind, "stimulus kind", 40), intensity: number(stimulus.intensity, "stimulus intensity", 100), remainingMs: number(stimulus.remainingMs, "stimulus duration", 3_600_000) },
   } as BrainSnapshot;
-  return { telemetry, history, start: body.start === true, mode: body.mode === "llm" ? "llm" : "direct" };
+  return { initialization: isInitialization(body.initialization) ? body.initialization : "garden", telemetry, history, start: body.start === true, mode: body.mode === "llm" ? "llm" : "direct" };
 }

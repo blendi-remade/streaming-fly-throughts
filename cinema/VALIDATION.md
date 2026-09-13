@@ -1,26 +1,26 @@
 # Validation
 
-Development verification, September 2026. These checks establish software behavior, not biological fidelity or decoded thought.
+These checks cover the Three.js exhibit. They do not establish biological fidelity or decoding of thoughts.
 
-- The midnight workstation revision passed production build and TypeScript checking. Chromium checks at 1440 × 900 and 390 × 844 found no horizontal overflow, no direction overlays, and all five stimulus controls visible. The mobile cable endpoint was within 1 px of the physical port. Sugar showed as an active stimulus, then as the last selected input after expiry; Clear returned the label to Input · None. The details drawer includes initialization from the actual Java implementation. Browser error collection was empty.
-- Recording playback for this revision was verified at 1600 × 900: a 2,009,889-byte VP9 WebM included the workstation, fly, screen, cable and Sugar indicator, without cinematic direction text. This was a local visual-study recording; it did not exercise paid H3 delivery.
+## Current checks
 
-- Full connectome bridge loaded 176,422 nodes and 6,287,749 edges.
-- Observed actual responses: sugar MN9 up to 120 Hz / feeding readout 0.746; looming DNp01 up to 370 Hz / escape readout 1; touch aDN1 up to 50 Hz; odor ORN_DM1 up to 123 Hz; bitter receptors up to 166 Hz.
-- Bridge reads remained responsive under simulation load: a sample of 80 requests had a median of 1.7 ms and a 95th percentile of 2.75 ms. Simulation speed varies substantially with current activity and concurrent rendering/build work; observed roughly 0.3–1× on this machine. The model never skips neural time to conceal lag.
-- Explicit reset recreated the network, sensory adaptation, motor state and random seed. Two full-connectome reset trials matched across 20 consecutive 50 ms windows.
-- Bridge rejects invalid/range-violating/oversized stimulus input, wrong content types and foreign origins. Four JUnit bridge tests include real HTTP lifecycle and reset→stimulus ordering.
-- Director tests exercise constrained interpretation, sensory motifs, request size and origin guards, proxy allowlists, key confidentiality, fallback, and mocked LLM responses. UI interpretation tests check that locomotion is not mislabeled as olfaction and that stimuli cannot override measured motor evidence.
-- Current cinema suite passes: 44 tests. The TypeScript check passes. The previous full Java suite passed all 60 tests; Java code is unchanged by the current presentation and latency work.
-- The production Next.js build passed compilation, TypeScript validation, and static generation for all routes after the dark showcase and timing changes.
-- Mocked Director lifecycle tests verify immediate authored startup, including when LLM assistance is selected; prompt admission gating; latest-observation coalescing; interruption of obsolete LLM enrichment; and cancellation during startup or brain disconnection. No test opens a paid H3 session.
-- Scheduler checks cover the 800 ms minimum between changed-scene prompt submissions, 12-second steady continuations, stale provider events, bounded version history, and per-version latency accounting. The default translation path makes no LLM request. Optional LLM enrichment applies to steady continuations; measured changes retain the direct path.
-- Browser polling targets 150 ms normally and 50 ms while waiting for an accepted stimulus. Fresh sequence, timestamp, request ordering, and stimulus identity are required before reporting observation; repeating the same input also requires a completed observation window. Tests cover confirmation, stale and failed observations, repeated inputs, and cancellation. These cadences are not a measured provider response guarantee.
-- Browser stimulus requests were verified through the actual Next server. Fixed a localhost/127.0.0.1 origin normalization mismatch; regression checks cover valid loopback, foreign origin and wrong-port requests.
-- Scene selection tests verify a maximum three-second editorial hold, unchanged source measurements and timestamps, escape preemption, and immediate clearing on reset, disconnection or stale evidence. The interface also clears the previous hold and steers immediately when a fresh sample confirms an accepted stimulus.
-- The combined launcher passes a syntax check and an isolated harness with mocked processes: existing-brain reuse, cleanup restricted to owned Windows child trees, graceful-to-forced shutdown escalation, custom-port propagation, cancellation during startup, rejection of an unrelated service, and POSIX process-group cleanup. This harness did not start or terminate the running exhibit or brain.
-- The actual Windows launcher was also exercised: it started the web app while reusing an existing bridge, stopped the owned web app while leaving that bridge healthy, and then started both services from stopped state. The final exhibit was left running.
-- The current FLY/THOUGHTS dark showcase passed Chromium inspection at 1440 × 900 and 390 × 844. The fly remains fixed with idle and measured activity animation; one cable connects it to the screen. The measured desktop cable endpoint error was 0 px. On mobile, the cable was rerouted outside the cinema picture. The large Sugar/Bitter/Shadow/Touch/Odor controls, keyboard shortcuts 1–5, and More details panel are part of this revision. A fresh browser session reported no errors.
-- A 30-second recording of the dark composition produced a playable VP9 WebM of 7,441,275 bytes. Playback at two seconds was visually inspected: fly proportions and the cable's attachment to the body were preserved. Capture contains the fly, cinema, caption and neural readout, includes an explicit provenance label, and supports early stop. This verifies local recording; received H3 video and audio still require a live session.
-- A server-side fal key is now configured, but actual paid fal/Director generation has **not** been exercised in this revision. Provider tests use mocked responses. ICE/TURN routing, actual video and audio delivery, generation latency and billing remain checks for the user's first real session.
-- Timing values shown in More details describe observed evidence, prompt submission, provider acceptance, and generated-chunk events. They do not timestamp the frame displayed by the browser. Provider buffering and already dispatched generation can delay visible response even when prompt submission is fast; no button-to-visible-frame latency has been established without a live session.
+- The cinema suite passes 50 tests. TypeScript checking and the production Next.js build pass.
+- Tests cover fresh stimulus observation, request ordering, source attribution, provider guards, prompt admission, stale events, initialization persistence, and secondary feeding during a dominant grooming response.
+- Geometry tests check all five physical stimulus targets and cable attachment at the animated head and monitor socket. They verify a direct suspended route and continuous particle movement when activity changes.
+- Desktop and mobile browser inspection verified the scene, starting-scene selector, camera controls, and visible stimulus controls. Left-drag orbit, right-drag pan, and WebGL context recovery were exercised during implementation.
+- The local bridge loaded 176,422 neurons and 6,287,749 connections. Actual HTTP stimulus checks observed Sugar increasing feeding while grooming remained dominant, Shadow producing escape output, and Touch changing aDN1 activity. These are individual observations, not biological validation.
+- A live H3 session delivered video containing the authored garden subject. Recording produced a roughly 5 MB VP9/Opus WebM blob and stopped at the 15-second limit. Earlier WebM playback was inspected at 1600 x 900. Native download behavior can depend on the browser host and settings.
+- The latest prompt revision, including the explicit coiled subject and secondary-response steering, passed automated checks. Its generated visual quality has not been revalidated with another paid session.
+- Documentation screenshots show the local procedural study, not generated H3 video.
+
+## Timing
+
+The default polling target is 150 ms, temporarily 50 ms during stimulus confirmation. Prompt changes have an 800 ms minimum submission interval. Continuations use a 12-second interval. Provider admission can defer either path.
+
+Live steering reads fresh samples. The separate procedural study can hold an observed scene briefly for readability. No hold changes a measurement or its timestamp.
+
+Provider acceptance and generated-chunk timing are not browser-frame timing. No reliable end-to-end button-to-visible-frame latency claim is made. Network load, simulation speed, generation, buffering, and the model's interpretation all affect the result.
+
+## Credential review
+
+Tracked and non-ignored working files and all reachable Git-history blobs were scanned for the configured local fal key and common token and private-key patterns. No matches were found. The local environment file is ignored and the example contains no credential. This is a bounded scan, not a guarantee against every possible secret format. Recheck the final staged files before publishing.

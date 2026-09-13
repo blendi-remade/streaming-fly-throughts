@@ -4,8 +4,8 @@ export type TranslatorMode = "direct" | "llm";
 export const FAST_STEER_INTERVAL_MS = 800;
 export const CONTINUATION_INTERVAL_MS = 12_000;
 
-export function directionKey(direction: Pick<CinematicDirection, "drive" | "sensoryTheme">): string {
-  return `${direction.drive}:${direction.sensoryTheme ?? "none"}`;
+export function directionKey(direction: Pick<CinematicDirection, "drive" | "sensoryTheme" | "responseKey">): string {
+  return `${direction.drive}:${direction.sensoryTheme ?? "none"}${direction.responseKey ? ":" + direction.responseKey : ""}`;
 }
 
 export interface DirectorLatency {

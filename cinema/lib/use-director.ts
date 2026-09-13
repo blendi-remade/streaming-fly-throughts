@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createFalClient } from "@fal-ai/client";
 import { wma } from "@fal-ai/client/realtime";
 import type { BrainSnapshot } from "./types";
-import { interpretBrain, type CinematicDirection } from "./cinematic";
+import { interpretBrain, type CinematicDirection, type Initialization } from "./cinematic";
 import { DirectorScheduler, directionKey, EMPTY_LATENCY, type DirectorLatency, type TranslatorMode } from "./director-scheduling";
 export type { DirectorLatency, TranslatorMode } from "./director-scheduling";
 
@@ -39,7 +39,7 @@ function healthySample(snapshot: BrainSnapshot): boolean {
 }
 
 export function useDirector(): DirectorState & {
-  start: (telemetry: BrainSnapshot) => Promise<void>;
+  start: (telemetry: BrainSnapshot, initialization?: Initialization) => Promise<void>;
   steer: (telemetry: BrainSnapshot) => Promise<void>;
   stop: () => Promise<void>;
   setTranslatorMode: (mode: TranslatorMode) => void;
@@ -51,6 +51,7 @@ export function useDirector(): DirectorState & {
   const epoch = useRef(0);
   const controller = useRef<AbortController | null>(null);
   const translation = useRef<AbortController | null>(null);
+  const initialization = useRef<Initialization>('garden');
   const latest = useRef<BrainSnapshot | null>(null);
   const receivedAt = useRef(0);
   const history = useRef<string[]>([]);
@@ -108,7 +109,7 @@ export function useDirector(): DirectorState & {
   const translate = useCallback(async (snapshot: BrainSnapshot, signal: AbortSignal): Promise<CinematicDirection> => {
     const response = await fetch("/api/director", {
       method: "POST", headers: { "Content-Type": "application/json" }, signal,
-      body: JSON.stringify({ telemetry: snapshot, history: history.current.slice(-6), start: false, mode: "llm" }),
+      body: JSON.stringify({ telemetry: snapshot, history: history.current.slice(-6), start: false, mode: "llm", initialization: initialization.current }),
     });
     const result = await response.json() as CinematicDirection & { error?: string };
     if (!response.ok) throw new Error(result.error || `Translation failed (HTTP ${response.status}).`);
@@ -156,19 +157,19 @@ export function useDirector(): DirectorState & {
     const request = new AbortController();
     translation.current = request;
     try {
-      let direction = interpretBrain(snapshot, false, variant.current);
+      let direction = interpretBrain(snapshot, false, variant.current, initialization.current);
       if (useLlm) {
         try {
           const enriched = await translate(snapshot, AbortSignal.any([signal, request.signal]));
           if (thisEpoch !== epoch.current || request.signal.aborted || signal.aborted) return;
           if (!latest.current || !healthySample(latest.current)) return;
-          const fresh = interpretBrain(latest.current, false, variant.current);
+          const fresh = interpretBrain(latest.current, false, variant.current, initialization.current);
           if (directionKey(fresh) !== directionKey(enriched)) return;
           // Keep provenance current; the model supplies only the artistic prose.
           direction = { ...fresh, prompt: enriched.prompt, caption: enriched.caption, translator: enriched.translator, warning: enriched.warning };
         } catch (error) {
           if (thisEpoch !== epoch.current || signal.aborted || request.signal.aborted) return;
-          direction = { ...interpretBrain(latest.current ?? snapshot, false, variant.current), warning: error instanceof Error ? `${error.message} Using direct artistic translation.` : "Using direct artistic translation." };
+          direction = { ...interpretBrain(latest.current ?? snapshot, false, variant.current, initialization.current), warning: error instanceof Error ? `${error.message} Using direct artistic translation.` : "Using direct artistic translation." };
         }
       }
       if (thisEpoch !== epoch.current || signal.aborted || request.signal.aborted) return;
@@ -202,9 +203,10 @@ export function useDirector(): DirectorState & {
     schedule();
   }, [finish, schedule]);
 
-  const start = useCallback(async (telemetry: BrainSnapshot) => {
+  const start = useCallback(async (telemetry: BrainSnapshot, chosen: Initialization = 'garden') => {
     if (["connecting", "live", "stopping"].includes(current.current.status)) return;
     if (!healthySample(telemetry)) { patch({ status: "error", error: "Start the brain simulation and wait for a fresh connectome signal before opening live cinema." }); return; }
+    initialization.current = chosen;
     const thisEpoch = ++epoch.current;
     controller.current = new AbortController();
     const signal = controller.current.signal;
@@ -221,7 +223,7 @@ export function useDirector(): DirectorState & {
       if (thisEpoch !== epoch.current || signal.aborted) return;
       const fresh = latest.current ?? telemetry;
       if (!healthySample(fresh)) throw new Error("The brain signal became stale before the cinema opened.");
-      const direction = interpretBrain(fresh, true);
+      const direction = interpretBrain(fresh, true, undefined, initialization.current);
       scheduler.current.observe(directionKey(direction), Date.now());
       // No LLM call is on the startup critical path, regardless of enrichment mode.
       const client = createFalClient({ proxyUrl: "/api/fal/proxy" });

@@ -2,17 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ArrowUpRight, Check, Citrus, Clapperboard, Feather, Focus, Info, Leaf, LoaderCircle, Maximize2, Pause, Play, RotateCcw, Shuffle, Volume2, VolumeX, Wind, X } from 'lucide-react';
+import { ArrowUpRight, Box, Bug, Monitor, MoveUpRight, Check, Citrus, Clapperboard, Feather, Focus, Info, Leaf, LoaderCircle, Maximize2, Pause, Play, RotateCcw, Shuffle, Volume2, VolumeX, Wind, X } from 'lucide-react';
 
 import dynamic from 'next/dynamic';
 
-import { DreamStudy } from './dream-study';
-
-import { SignalCable } from './signal-cable';
-
-import { RoomDetails } from './room-details';
+import type { SceneView } from './observatory';
+import type { ViewName } from '@/lib/scene/observatory';
 
 import { useBrain } from '@/lib/use-brain';
+
+import { INITIALIZATIONS, type Initialization } from '@/lib/cinematic';
 
 import { useDirector } from '@/lib/use-director';
 
@@ -24,9 +23,7 @@ import { populationRate, readBrain, READINGS } from '@/lib/readings';
 
 import type { Drive, StimulusKind } from '@/lib/types';
 
-
-
-const FlySpecimen = dynamic(() => import('./fly-specimen'), { ssr: false, loading: () => <div className="specimen-loading"><LoaderCircle className="spin" size={18} /></div> });
+const Observatory = dynamic(() => import('./observatory'), { ssr: false, loading: () => <div className="scene-loading"><span className="loading-orbit" /><p>Preparing a little universe</p></div> });
 
 const STIMULI: { kind: StimulusKind; label: string; icon: typeof Citrus; drive: Drive; color: string }[] = [
 
@@ -46,8 +43,6 @@ const NAMES: Record<Drive, string> = { quiet: 'Rest', appetite: 'Appetite', aver
 
 const TOUR: StimulusKind[] = ['sugar', 'odor', 'loom', 'touch', 'bitter', 'sugar'];
 
-
-
 export function Theater() {
 
   const brain = useBrain();
@@ -59,6 +54,7 @@ export function Theater() {
   const sceneSnapshot = scene.snapshot || brain.snapshot;
 
   const director = useDirector();
+  const [initialization, setInitialization] = useState<Initialization>('garden');
 
   const [falConfigured, setFalConfigured] = useState(false);
 
@@ -80,13 +76,11 @@ export function Theater() {
 
   const video = useRef<HTMLVideoElement>(null), dialog = useRef<HTMLDivElement>(null);
 
-  const stage = useRef<HTMLElement>(null), specimen = useRef<HTMLDivElement>(null), port = useRef<HTMLDivElement>(null);
-
-  const anchor = useRef<{ x: number; y: number } | null>(null);
+  const [view, setView] = useState<SceneView>({ name: 'room', revision: 0 });
+  const focusView = useCallback((name: ViewName) => setView(previous => ({ name, revision: previous.revision + 1 })), []);
 
   const request = useRef(0);
 
-  const current = useRef(sceneSnapshot); current.current = sceneSnapshot;
 
   const status = useRef(director.status); status.current = director.status;
 
@@ -110,8 +104,6 @@ export function Theater() {
 
   const points = brain.history.map((v, i) => `${i * 3.6},${31 - v / maximum * 27}`).join(' ');
 
-  const reportAnchor = useCallback((point: { x: number; y: number }) => { anchor.current = point; }, []);
-
   useEffect(() => {
 
     let alive = true;
@@ -134,7 +126,7 @@ export function Theater() {
 
   }, [director.stream]);
 
-  useEffect(() => { if (brain.connected && (live || connecting)) void director.steer(sceneSnapshot); }, [brain.connected, sceneSnapshot, live, connecting, director.steer]);
+  useEffect(() => { if (brain.connected && (live || connecting)) void director.steer(brain.snapshot); }, [brain.connected, brain.snapshot, live, connecting, director.steer]);
 
   useEffect(() => { if (!brain.connected && (live || connecting)) { void director.stop(); setNotice('Brain disconnected. Cinema stopped.'); } }, [brain.connected, live, connecting, director.stop]);
 
@@ -230,7 +222,7 @@ export function Theater() {
 
     if (!falConfigured || !brain.connected) { setModal('setup'); return; }
 
-    await director.start(current.current);
+    await director.start(brain.snapshot, initialization);
 
   };
 
@@ -260,9 +252,7 @@ export function Theater() {
 
   };
 
-
-
-  return <main className="exhibit" style={{ '--drive-color': reading.color } as React.CSSProperties}>
+  return <main className="exhibit" data-camera={view.name} style={{ '--drive-color': reading.color } as React.CSSProperties}>
 
     <header className="topbar">
 
@@ -272,49 +262,50 @@ export function Theater() {
 
     </header>
 
-    <section className="showcase" ref={stage} aria-label="Fly brain connected to its cinema">
-
-      <div className="room-light" /><div className="floor-grid" /><RoomDetails />
-
-      <div className="stage-coordinate">DROSOPHILA MELANOGASTER <span>001</span></div>
-
-      <div className="specimen-view" data-specimen ref={specimen}><FlySpecimen activity={activity} drive={brain.connected ? rawReading.drive : reading.drive} onAnchor={reportAnchor} /></div>
-
-      <div className="tv-assembly">
-
-        <div className="tv-label"><span><i className={live ? 'on-air' : ''} />{live ? 'LIVE CINEMA' : connecting ? 'CONNECTING' : 'VISUAL STUDY'}</span><span className="stimulus-indicator" data-stimulus-indicator role="status" style={{ '--input-color': input?.color || '#73948c' } as React.CSSProperties}><i />{inputState} · {pending === 'clear' ? 'Clear' : input?.label || 'None'}</span></div>
-
-        <div className="tv-frame">
-
-          <div className="tv-port" ref={port} aria-label="Neural input port"><span /></div>
-
-          <div className="screen-content">
-
-            <DreamStudy drive={reading.drive} activity={activity} paused={paused || live} />
-
-            <video data-cinema-video ref={video} autoPlay playsInline muted={muted} aria-label="Live generated cinema" className={`director-video ${live && director.stream ? 'visible' : ''}`} />
-
-            <div className="screen-shade" />
-
-            {connecting && <div className="connecting-veil"><LoaderCircle className="spin" size={23} /><span>Opening the cinema</span><small>The first frames are being generated.</small></div>}
-
-          </div>
-
-          <div className="tv-chin"><div className="tv-maker"><span className={live ? 'power-light active' : 'power-light'} />NEURAL DISPLAY<span className="model-number">01</span></div><div className="tv-actions">{live && <span className="session-clock">{formatTime(director.elapsed)}</span>}<button className="screen-icon" onClick={() => live ? setMuted(!muted) : setPaused(!paused)} aria-label={live ? muted ? 'Unmute film' : 'Mute film' : paused ? 'Play preview' : 'Pause preview'}>{live ? muted ? <VolumeX size={15} /> : <Volume2 size={15} /> : paused ? <Play size={14} /> : <Pause size={14} />}</button></div></div>
-
-        </div><div className="tv-stand" /><div className="tv-foot" /><div className="tv-reflection" />
-
-      </div>
-
-      <SignalCable stage={stage} specimen={specimen} port={port} anchor={anchor} activity={activity} />
-
-      <button className="neural-hud" onClick={() => setModal('details')} aria-label="Inspect measured neural activity"><div className="hud-heading"><i className={brain.connected ? 'online' : ''} /><span>NEURAL ACTIVITY</span><ArrowUpRight size={11} /></div><div className="hud-readout"><strong>{brain.connected ? brain.snapshot.totalSpikes.toLocaleString() : '—'}</strong><span>spikes / 50 ms</span></div><svg viewBox="0 0 227 36" preserveAspectRatio="none" aria-label="Recent measured spikes"><path d="M0 35H227" stroke="#263537" /><polyline points={points} fill="none" stroke="#73c4b1" strokeWidth="1.2" vectorEffect="non-scaling-stroke" /></svg><div className="hud-foot">176,422 nodes<span>{brain.connected ? `${brain.snapshot.realTimeFactor.toFixed(2)}×` : 'OFFLINE'}</span></div></button>
-
-      <span className="stage-note">Simulated brain. Artistic interpretation.</span>
-
+    <section className="showcase" aria-label="Interactive neural observatory">
+      <Observatory snapshot={brain.snapshot} activity={activity} drive={reading.drive}
+        rawDrive={brain.connected ? rawReading.drive : reading.drive}
+        input={observedInput?.kind || (!brain.connected ? selected : null)}
+        paused={paused} live={live} videoRef={video} view={view} onView={focusView}
+        onStimulus={kind => { setTour(false); void apply(kind); }} />
+      <video data-cinema-video ref={video} autoPlay playsInline muted={muted} className="cinema-source" aria-hidden="true" />
     </section>
 
+    <div className="scene-initialization">
+      <label htmlFor="starting-scene">Starting scene</label>
+      <select id="starting-scene" value={initialization} disabled={live || connecting || director.status === 'stopping'} onChange={event => setInitialization(event.target.value as Initialization)}>
+        {INITIALIZATIONS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+      </select>
+      <small>{live || connecting ? 'Stop cinema to change the setting.' : 'You choose the world. Neural readouts direct the action.'}</small>
+    </div>
+
+    <nav className="scene-views" aria-label="Camera views">
+      <span className="view-label">EXPLORE THE ROOM</span>
+      <div>{([{ name: 'room', label: 'Room', icon: Box }, { name: 'specimen', label: 'Fly', icon: Bug }, { name: 'cinema', label: 'Cinema', icon: Monitor }] as const).map(item =>
+        <button key={item.name} aria-label={item.label + ' view'} aria-pressed={view.name === item.name} onClick={() => focusView(item.name)}><item.icon size={15} /><span>{item.label}</span></button>
+      )}</div>
+    </nav>
+
+    <button className="neural-hud" onClick={() => setModal('details')} aria-label="Inspect measured neural activity">
+      <div className="hud-heading"><i className={brain.connected ? 'online' : ''} /><span>THE SIGNAL</span><ArrowUpRight size={12} /></div>
+      <div className="hud-readout"><strong>{brain.connected ? brain.snapshot.totalSpikes.toLocaleString() : '—'}</strong><span>spikes / 50 ms</span></div>
+      <svg viewBox="0 0 227 36" preserveAspectRatio="none" aria-label="Recent measured spikes"><path d="M0 35H227" stroke="#263537" /><polyline points={points} fill="none" stroke="#a4c4af" strokeWidth="1.2" vectorEffect="non-scaling-stroke" /></svg>
+      <div className="hud-foot">176,422 nodes<span>{brain.connected ? brain.snapshot.realTimeFactor.toFixed(2) + '×' : 'OFFLINE'}</span></div>
+    </button>
+
+    <div className="scene-status">
+      <div className="screen-mode"><i className={live ? 'on-air' : ''} />{live ? 'LIVE CINEMA' : connecting ? 'CONNECTING' : 'VISUAL STUDY'}{live && <span>{formatTime(director.elapsed)}</span>}
+        <button onClick={() => live ? setMuted(!muted) : setPaused(!paused)} aria-label={live ? muted ? 'Unmute film' : 'Mute film' : paused ? 'Play preview' : 'Pause preview'}>{live ? muted ? <VolumeX size={14} /> : <Volume2 size={14} /> : paused ? <Play size={14} /> : <Pause size={14} />}</button>
+      </div>
+      <span data-stimulus-indicator className="stimulus-indicator" role="status" style={{ '--input-color': input?.color || '#9cae9f' } as React.CSSProperties}><i />{inputState} · {pending === 'clear' ? 'Clear' : input?.label || 'None'}</span>
+      <p>Simulated brain. Artistic interpretation.</p>
+      {live && <p role="status">{director.pendingVersion > 0 ? 'Direction sent · awaiting generator' : director.appliedVersion > director.visibleVersion ? 'Direction accepted · generating' : 'Generator connected'}<br />{director.bufferSeconds > 0 ? `${director.bufferSeconds.toFixed(1)}s video buffer` : 'Video responses follow generation latency'}</p>}
+    </div>
+    <div className="orbit-hint"><MoveUpRight size={12} /><span>Left-drag to orbit <b>·</b> Right-drag to pan <b>·</b> Scroll to zoom</span></div>
+    {connecting && <div className="connection-toast" role="status"><LoaderCircle className="spin" size={16} /><span>Opening the cinema<small>Preparing the first frames</small></span><button onClick={() => void director.stop()} aria-label="Cancel cinema connection"><X size={16} /></button></div>}
+
     <div className="control-dock">
+      <div className="dock-caption"><span>01 — INTERACT</span><strong>Change its world.</strong></div>
 
       <div className="stimulus-group" aria-label="Give the fly a stimulus">{STIMULI.map((s, index) => {
 
@@ -324,7 +315,7 @@ export function Theater() {
 
       })}</div>
 
-      <div className="dock-actions"><button className={`icon-button auto-button ${tour ? 'active' : ''}`} onClick={() => setTour(!tour)} aria-label={tour ? 'Stop automatic stimuli' : 'Automatic stimuli'} aria-pressed={tour} title="Automatic stimuli"><Shuffle size={17} /></button><button className="icon-button" onClick={() => { setTour(false); void apply('clear'); }} aria-label="Clear stimulus" title="Clear stimulus"><RotateCcw size={16} /></button><span className="dock-divider" /><button className={`capture-button ${recording.seconds !== null ? 'recording' : ''}`} onClick={recording.start} aria-label={recording.seconds !== null ? 'Stop and save recording' : 'Record 30 seconds'} title="Record 30 seconds">{recording.seconds !== null ? <><i className="record-dot" /><span>{30 - recording.seconds}s</span></> : <Clapperboard size={18} />}</button><button className={`stream-button ${live ? 'streaming' : ''}`} onClick={() => void startFilm()} disabled={director.status === 'stopping'}>{connecting ? <><LoaderCircle className="spin" size={15} />Cancel</> : live ? <><span className="stop-square" />Stop cinema</> : <><Play size={14} fill="currentColor" />Start cinema</>}</button></div>
+      <div className="dock-actions"><button className={`icon-button auto-button ${tour ? 'active' : ''}`} onClick={() => setTour(!tour)} aria-label={tour ? 'Stop automatic stimuli' : 'Automatic stimuli'} aria-pressed={tour} title="Automatic stimuli"><Shuffle size={17} /></button><button className="icon-button" onClick={() => { setTour(false); void apply('clear'); }} aria-label="Clear stimulus" title="Clear stimulus"><RotateCcw size={16} /></button><span className="dock-divider" /><button className={`capture-button ${recording.seconds !== null ? 'recording' : ''}`} onClick={recording.start} aria-label={recording.seconds !== null ? 'Stop and save recording' : 'Record 15 seconds'} title="Record 15 seconds">{recording.seconds !== null ? <><i className="record-dot" /><span>{15 - recording.seconds}s</span></> : <Clapperboard size={18} />}</button><button className={`stream-button ${live ? 'streaming' : ''}`} onClick={() => void startFilm()} disabled={director.status === 'stopping'}>{connecting ? <><LoaderCircle className="spin" size={15} />Cancel</> : live ? <><span className="stop-square" />Stop cinema</> : <><Play size={14} fill="currentColor" />Start cinema</>}</button></div>
 
     </div>
 
@@ -350,9 +341,9 @@ export function Theater() {
 
         <div className="detail-section"><h3>The model</h3><p>176,422 imported nodes · 6,287,749 connections. MaleCNS v1.0 marks 165,122 nodes as traced. Simplified spiking neurons and the original sensory encoders run locally, including analytical looming input. This does not decode thoughts or consciousness.</p><p>At startup, all neurons begin at −52 mV with empty spike queues, zero synaptic current and a fixed random seed (20260903). Ambient light (0.6) drives the visual system; the network advances in 0.5 ms steps. Button presses add sensory input to this ongoing activity.</p><p>The connectome supplies wiring, not a saved mental state or memories. The mapping from measured activity to cinematic imagery is authored, not a validated thought decoder. Idle movement is animation; neural readouts modulate it.</p><p>Clear removes the stimulus while activity continues. Reset rebuilds neural and sensory adaptation state with the same seed, and stops the cinema.</p><button className="secondary-button" onClick={() => void reset()} disabled={!brain.connected}><RotateCcw size={14} />Reset neural state</button></div>
 
-        <div className="detail-section"><h3>Recording & sessions</h3><p>Record exports up to 30 seconds as WebM. A live screening stops after 3 minutes. fal bills generated video, including queued output, and applies a minimum charge.</p><div className="detail-links"><a href="https://fal.ai/models/minimax/h3-max/director" target="_blank" rel="noreferrer">Director pricing <ArrowUpRight size={12} /></a><a href="https://male-cns.janelia.org/" target="_blank" rel="noreferrer">Open connectome <ArrowUpRight size={12} /></a></div><small>MaleCNS: FlyEM / Janelia, Cambridge, MRC LMB & Google Research · CC BY 4.0. Fly anatomy is a procedural artistic model.</small></div>
+        <div className="detail-section"><h3>Recording & sessions</h3><p>Record exports up to 15 seconds as WebM. A live screening stops after 3 minutes. fal bills generated video, including queued output, and applies a minimum charge.</p><div className="detail-links"><a href="https://fal.ai/models/minimax/h3-max/director" target="_blank" rel="noreferrer">Director pricing <ArrowUpRight size={12} /></a><a href="https://male-cns.janelia.org/" target="_blank" rel="noreferrer">Open connectome <ArrowUpRight size={12} /></a></div><small>MaleCNS: FlyEM / Janelia, Cambridge, MRC LMB & Google Research · CC BY 4.0. Fly anatomy is a procedural artistic model.</small></div>
 
-      </> : <><div className="connection-row"><span><i className={brain.connected ? 'online' : ''} />Brain simulation</span>{brain.connected ? <Check size={16} /> : <code>npm run brain</code>}</div><div className="connection-row"><span><i className={falConfigured ? 'online' : ''} />fal</span>{falConfigured ? <Check size={16} /> : <span>Key required</span>}</div>{!falConfigured && <p>Set <code>FAL_KEY</code> in <code>cinema/.env.local</code> and restart the app. The key stays on the server.</p>}<p>A screening runs for up to 3 minutes. Video generation is billed by fal.</p><button className="stream-button wide" disabled={!brain.connected || !falConfigured} onClick={() => { setModal(null); void director.start(current.current); }}><Play size={14} fill="currentColor" />Start cinema</button></>}
+      </> : <><div className="connection-row"><span><i className={brain.connected ? 'online' : ''} />Brain simulation</span>{brain.connected ? <Check size={16} /> : <code>npm run brain</code>}</div><div className="connection-row"><span><i className={falConfigured ? 'online' : ''} />fal</span>{falConfigured ? <Check size={16} /> : <span>Key required</span>}</div>{!falConfigured && <p>Set <code>FAL_KEY</code> in <code>cinema/.env.local</code> and restart the app. The key stays on the server.</p>}<p>A screening runs for up to 3 minutes. Video generation is billed by fal.</p><button className="stream-button wide" disabled={!brain.connected || !falConfigured} onClick={() => { setModal(null); void director.start(brain.snapshot, initialization); }}><Play size={14} fill="currentColor" />Start cinema</button></>}
 
     </div></div>}
 
@@ -365,6 +356,4 @@ function formatTime(seconds: number) { const n = Math.max(0, Math.floor(seconds)
 function latency(ms: number | null | undefined) { return ms == null ? '—' : ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(1)} s`; }
 
 function FlyMark() { return <svg width="23" height="23" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 11C12 5 5 4 5 10c0 5 8 8 11 7M16 11c4-6 11-7 11-1 0 5-8 8-11 7" stroke="currentColor" strokeWidth="1.25" /><ellipse cx="16" cy="19" rx="2.5" ry="7" fill="currentColor" /><circle cx="16" cy="10" r="3" fill="currentColor" /><path d="m14 17-5 4-2 5m11-9 5 4 2 5m-12-6-3 7m9-7 3 7M14 8l-3-4m7 4 3-4" stroke="currentColor" strokeWidth="1.2" /></svg>; }
-
-
 

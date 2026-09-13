@@ -102,6 +102,23 @@ test("opening has no LLM dependency, even when optional enrichment is enabled", 
   await h.cleanup();
 });
 
+test("selected initialization persists and secondary feeding wakes a grooming scene", async () => {
+  const h = harness();
+  try {
+    await h.hook.start(h.sample({ groom: 0.4 }), 'sugar');
+    assert.match(String(h.sent[0].prompt), /sugar crystal/);
+    assert.doesNotMatch(String(h.sent[0].prompt), /poop|dog turd/);
+    h.event({ type: 'configured', prompt_version: 1 });
+    await h.advance(1000);
+    await h.hook.steer(h.sample({ groom: 0.4, feed: 0.2 }));
+    await h.advance(0);
+    assert.equal(h.sent.length, 2, 'secondary response should steer before the continuation timer');
+    assert.match(String(h.sent[1].prompt), /concurrent measured feeding response/);
+    assert.match(String(h.sent[1].prompt), /sugar crystal/);
+    assert.doesNotMatch(String(h.sent[1].prompt), /poop|dog turd/);
+  } finally { await h.cleanup(); }
+});
+
 test("actual hook sends a changed drive immediately and coalesces provider-pending observations", async () => {
   const h = harness();
   await h.hook.start(h.sample());
@@ -119,7 +136,7 @@ test("actual hook sends a changed drive immediately and coalesces provider-pendi
   h.event({ type: "prompt_applied", prompt_version: 2 });
   await h.advance(0);
   assert.equal(h.sent.length, 3);
-  assert.match(String(h.sent[2].prompt), /nectar|fruit|sugar/);
+  assert.match(String(h.sent[2].prompt), /feeding approach|reverent approach|closer to the same dropping/);
   assert.ok(h.requests.every(r => r.url === "/api/config"));
   await h.cleanup();
 });

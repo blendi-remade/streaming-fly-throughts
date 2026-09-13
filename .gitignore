@@ -38,6 +38,8 @@ __pycache__/
 **/.env
 **/.env.local
 **/.env.*.local
+**/.env.*
+!**/.env.example
 cinema/node_modules/
 cinema/.next/
 cinema/.brain-build/
